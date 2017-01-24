@@ -17,7 +17,7 @@ Issues:
      it *appears* to stop it due to Issue #1, but it doesn't actually stop it.
      To reproduce:
        0. Set gyro sensitivity to low, and place phone on table so no shakes will be detected.
-       1. Set Hours spinner to 0.  Racket starts, signifiying there's a 30-second countdown in progress.
+       1. Set Hours spinner to 0.  Racket starts, signifying there's a 30-second countdown in progress.
        2. Set Hours spinner to 1.  Racket stops (due to Issue #1), but 30-second countdown continues silently!
        3. Wait for now-silent 30-second countdown to expire.  Text gets sent.
 
@@ -26,7 +26,7 @@ Issues:
      This is an extension of Issue #2 ("Changing Hours does not stop an in-progress 30-second countdown").
      To reproduce:
        0. Set gyro sensitivity to low, and place phone on table so no shakes will be detected.
-       1. Set Hours spinner to 0.  Racket starts, signifiying there's a 30-second countdown in progress.
+       1. Set Hours spinner to 0.  Racket starts, signifying there's a 30-second countdown in progress.
        2. Set Hours spinner to 1.  Racket stops, but 30-second countdown continues silently.
        3. Set Hours spinner to 0.  Racket starts again. Now there are 2 30-second countdowns in progress.
        4. Set Hours spinner to 1.  Racket stops, the two 30-second countdowns continue silently.
@@ -103,7 +103,7 @@ Issues:
 
      If you have "Off when charging" checked and set the Hours spinner to 0,
      it goes into an unfriendly cpu-consuming loop, continually calling reschedule()
-     and then going off immedietely.
+     and then going off immediately.
 
 ==========================================================================
 
