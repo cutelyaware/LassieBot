@@ -35,7 +35,7 @@ import java.util.TimerTask;
 public class LassieBotService extends Service {
     static final String
         PREFS_NAME = "com.superliminal.android.lassiebot",
-        PREFS_KEY_TIMEOUT_HOURS = "imeout_hours",
+        PREFS_KEY_TIMEOUT_HOURS = "timeout_hours",
         PREFS_KEY_RUNNING = "running",
         PREFS_KEY_CONFIGURE = "configuring",
         PREFS_KEY_DISABLE_WHILE_CHARGING = "disable while charging",
@@ -64,7 +64,7 @@ public class LassieBotService extends Service {
     private static final int DURATION_THRESHOLD_MILLIS = 1500; // Minimum time between resets.
     private static final int NAME_LIMIT = 20;
     private MediaPlayer dink, beep, buzz, tick;
-    private static Timer deadManSwitch = new Timer(); // Must be static or we get lots of them!
+    private static Timer deadManSwitch; // Must be static or we get lots of them!
     private final static Object TIMER_SYNC = new Object();
     private WakeLock wakeLock;
     private OnSharedPreferenceChangeListener mPrefListener; // Must be retained as a member or it can be GC'ed.
@@ -215,11 +215,23 @@ public class LassieBotService extends Service {
         // before being replaced, So long as this is the only place that creates the timers,
         // synchronization may disallow that error.
         synchronized(TIMER_SYNC) {
-            deadManSwitch.cancel();
-            deadManSwitch.purge();
+            if(deadManSwitch != null) {
+                deadManSwitch.cancel();
+                deadManSwitch.purge();
+            }
             Timer new_timer = new Timer();
             new_timer.schedule(new LertAlarm(), TIMEOUT_MILLIS);
             deadManSwitch = new_timer;
+        }
+    }
+
+    private void unschedule() {
+        synchronized(TIMER_SYNC) {
+            if(deadManSwitch != null) {
+                deadManSwitch.cancel();
+                deadManSwitch.purge();
+                deadManSwitch = null;
+            }
         }
     }
 
@@ -286,6 +298,7 @@ public class LassieBotService extends Service {
         wakeLock.release();
         //Toast.makeText(this, "Lert Service stopped", Toast.LENGTH_LONG).show();
         ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(mShakeSensor);
+        unschedule(); // To stop the timer which would otherwise keep running!
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, PREFS_SHARE_MODE);
         prefs.unregisterOnSharedPreferenceChangeListener(mPrefListener);
         prefs.edit().putBoolean(PREFS_KEY_RUNNING, false).commit();
