@@ -107,6 +107,12 @@ public class LassieBotService extends Service {
                 for(int i=0; i<COUNTDOWN_SECONDS; i++) {
                     try {
                         Thread.sleep(1000);
+                        if( ! prefs.getBoolean(PREFS_KEY_RUNNING, false)) {
+                            // Happens if user switches off service during countdown without a motion event.
+                            vibes.cancel();
+                            tick.pause();
+                            return;
+                        }
                     } catch (InterruptedException e) {}
                     Log.w(TAG, "diff = " + (counting_start - mShakeSensor.mLastStrongShake));
                     if(mShakeSensor.mLastStrongShake > counting_start) {
