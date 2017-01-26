@@ -33,6 +33,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class LassieBotService extends Service {
+    static final boolean DEBUG = true;
     static final String
         PREFS_NAME = "com.superliminal.android.lassiebot",
         PREFS_KEY_TIMEOUT_HOURS = "timeout_hours",
@@ -58,14 +59,14 @@ public class LassieBotService extends Service {
     static final double GYROSCOPE_THRESHOLD_DEFAULT = GYROSCOPE_MAX / 2.; //.05;
     static double GYROSCOPE_THRESHOLD = GYROSCOPE_THRESHOLD_DEFAULT; // Gyroscope event sensitivity.
 
-    private final static boolean DEBUG = false;
     private final static int COUNTDOWN_SECONDS = 30;
     private static final int LERT_SERVICE_ID = 666;
-    private long TIMEOUT_MILLIS = DEFAULT_TIMEOUT_HOURS * 60 * 60 * 1000;
+    private static final int MILLIS_PER_UNIT = 1000 * 60 * (DEBUG ? 1 : 60); // Units = minutes during debugging, hours normally.
+    private long TIMEOUT_MILLIS = DEFAULT_TIMEOUT_HOURS * MILLIS_PER_UNIT;
     private static final int DURATION_THRESHOLD_MILLIS = 1500; // Minimum time between resets.
     private static final int NAME_LIMIT = 20;
     private MediaPlayer dink, beep, buzz, tick;
-    private static Timer deadManSwitch; // Must be static or we get lots of them!
+    private Timer deadManSwitch;
     private final static Object TIMER_SYNC = new Object();
     private WakeLock wakeLock;
     private OnSharedPreferenceChangeListener mPrefListener; // Must be retained as a member or it can be GC'ed.
@@ -105,11 +106,12 @@ public class LassieBotService extends Service {
                 vibes.vibrate(new long[] {500, 500}, 0);
                 // Block while giving user a chance to nudge the phone to cancel.
                 final long counting_start = System.currentTimeMillis();
-                for(int i=0; i<COUNTDOWN_SECONDS; i++) {
+                for(int i=0; i<(DEBUG ? COUNTDOWN_SECONDS / 10 : COUNTDOWN_SECONDS); i++) {
                     try {
                         Thread.sleep(1000);
-                        if( ! prefs.getBoolean(PREFS_KEY_RUNNING, false)) {
+                        if(deadManSwitch == null) {
                             // Happens if user switches off service during countdown without a motion event.
+                            // Note: Can't rely on actual running status because user can have switched it back on but this instance still needs to exit.
                             vibes.cancel();
                             tick.pause();
                             return;

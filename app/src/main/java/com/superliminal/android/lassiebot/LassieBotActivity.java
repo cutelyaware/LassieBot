@@ -45,7 +45,7 @@ public class LassieBotActivity extends Activity {
         int timeout_hours = mPrefs.getInt(LassieBotService.PREFS_KEY_TIMEOUT_HOURS, LassieBotService.DEFAULT_TIMEOUT_HOURS);
         boolean configuring = mPrefs.getBoolean(LassieBotService.PREFS_KEY_CONFIGURE, false);
         LassieBotService.CONFIGURE = configuring;
-        intSpinner.setAll(LassieBotService.CONFIGURE ? 0 : 1, 24, timeout_hours);
+        intSpinner.setAll(1, 24, timeout_hours);
         intSpinner.addListener(new IntSpinnerListener() {
             @Override
             public void valueChanged(int new_val) {
@@ -183,6 +183,7 @@ public class LassieBotActivity extends Activity {
         if(running && !mHaveICEs) // Rare case but possible when user removes last ICE.
             stopService(mServiceIntent);
         toggle.setEnabled(mHaveICEs);
+        ((TextView)findViewById(R.id.timeout_label)).setText("Timeout " + (LassieBotService.DEBUG ? "Minutes" : "Hours"));
         final CheckBox configureCheckBox = (CheckBox) findViewById(R.id.calibrate);
         boolean configuring = LassieBotService.CONFIGURE;
         configureCheckBox.setChecked(configuring);
