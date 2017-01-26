@@ -1,8 +1,5 @@
 package com.superliminal.android.lassiebot;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
@@ -29,6 +26,9 @@ import android.widget.ToggleButton;
 import com.superliminal.android.lassiebot.IntSpinner.IntSpinnerListener;
 import com.superliminal.util.android.EmailUtils;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class LassieBotActivity extends Activity {
     private OnSharedPreferenceChangeListener runningListener;
     private SharedPreferences mPrefs; // Seems to be important to not instantiate here.
@@ -52,7 +52,7 @@ public class LassieBotActivity extends Activity {
                 mPrefs.edit().putInt(LassieBotService.PREFS_KEY_TIMEOUT_HOURS, new_val).commit();
             }
         });
-        // Initialize configuration controls. 
+        // Initialize configuration controls.
         final CheckBox configureCheckBox = (CheckBox) findViewById(R.id.calibrate);
         configureCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
@@ -96,7 +96,7 @@ public class LassieBotActivity extends Activity {
         updateControls();
         // Note: The pref_running value can be out of sync with sys_running because the
         // service may have been killed without its onDestroy method being called.
-        // In general use, that would be a terrible thing but it does happen 
+        // In general use, that would be a terrible thing but it does happen
         // during testing when restarting the app in Eclipse.
         // Log the error and restart service to get back in sync.
         if(shouldBeRunning()) {
@@ -243,7 +243,7 @@ public class LassieBotActivity extends Activity {
             do {
                 String name = contacts.getString(nameIdx);
                 String phone = contacts.getString(phoneIdx);
-                numbers.add(name + LassieBotService.NAME_PHONE_SEPERATOR + " " + phone);
+                numbers.add(name + LassieBotService.NAME_PHONE_SEPARATOR + " " + phone);
                 Log.d(LassieBotService.TAG, phone);
                 System.out.println(phone);
             } while(contacts.moveToNext());

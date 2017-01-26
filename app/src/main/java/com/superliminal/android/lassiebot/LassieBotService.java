@@ -46,7 +46,7 @@ public class LassieBotService extends Service {
         PREFS_KEY_TEST = "do test";
     static final String ICE_PREFIX = "ICE:";
     static final String TAG = "lert";
-    static final char NAME_PHONE_SEPERATOR = '\u2013';
+    static final char NAME_PHONE_SEPARATOR = '\u2013';
     static final int PREFS_SHARE_MODE = android.content.Context.MODE_WORLD_READABLE;
     static final int DEFAULT_TIMEOUT_HOURS = 12;
     static boolean CONFIGURE = false; // Whether to play sound on strong events.
@@ -57,6 +57,7 @@ public class LassieBotService extends Service {
     static final double GYROSCOPE_MAX = 1;
     static final double GYROSCOPE_THRESHOLD_DEFAULT = GYROSCOPE_MAX / 2.; //.05;
     static double GYROSCOPE_THRESHOLD = GYROSCOPE_THRESHOLD_DEFAULT; // Gyroscope event sensitivity.
+
     private final static boolean DEBUG = false;
     private final static int COUNTDOWN_SECONDS = 30;
     private static final int LERT_SERVICE_ID = 666;
@@ -145,7 +146,7 @@ public class LassieBotService extends Service {
             Set<String> ice_phones = new HashSet<String>();
             ice_phones = prefs.getStringSet(PREFS_KEY_ICE_PHONES, ice_phones);
             for(String contact : ice_phones) {
-                int separator = contact.indexOf(LassieBotService.NAME_PHONE_SEPERATOR);
+                int separator = contact.indexOf(LassieBotService.NAME_PHONE_SEPARATOR);
                 if(separator < 0)
                     continue; // Invalid contact.
                 String name = contact.substring(LassieBotService.ICE_PREFIX.length(), separator);
