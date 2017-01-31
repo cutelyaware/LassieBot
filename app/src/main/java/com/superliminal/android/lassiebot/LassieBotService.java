@@ -59,7 +59,7 @@ public class LassieBotService extends Service {
     static final double GYROSCOPE_THRESHOLD_DEFAULT = GYROSCOPE_MAX / 2.; //.05;
     static double GYROSCOPE_THRESHOLD = GYROSCOPE_THRESHOLD_DEFAULT; // Gyroscope event sensitivity.
 
-    private final static int COUNTDOWN_SECONDS = 30;
+    private final static int COUNTDOWN_SECONDS = 10;
     private static final int LERT_SERVICE_ID = 666;
     private static final int MILLIS_PER_UNIT = 1000 * 60 * (DEBUG ? 1 : 60); // Units = minutes during debugging, hours normally.
     private long TIMEOUT_MILLIS = DEFAULT_TIMEOUT_HOURS * MILLIS_PER_UNIT;
@@ -106,7 +106,7 @@ public class LassieBotService extends Service {
                 vibes.vibrate(new long[] {500, 500}, 0);
                 // Block while giving user a chance to nudge the phone to cancel.
                 final long counting_start = System.currentTimeMillis();
-                for(int i=0; i<(DEBUG ? COUNTDOWN_SECONDS / 10 : COUNTDOWN_SECONDS); i++) {
+                for(int i=0; i<COUNTDOWN_SECONDS; i++) {
                     try {
                         Thread.sleep(1000);
                         if(deadManSwitch == null) {
