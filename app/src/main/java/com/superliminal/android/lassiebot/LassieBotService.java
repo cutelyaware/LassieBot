@@ -33,7 +33,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class LassieBotService extends Service {
-    static final boolean DEBUG = true;
+    static final boolean DEBUG = false;
     static final String
         PREFS_NAME = "com.superliminal.android.lassiebot",
         PREFS_KEY_TIMEOUT_HOURS = "timeout_hours",

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.superliminal.android.lassiebot"
-    android:versionCode="2"
-    android:versionName="1.1" >
+    android:versionCode="3"
+    android:versionName="1.2" >
     <!-- Need level 14 to get user name from their profile. Also gets us ToggleButtons-->
     <uses-sdk
         android:minSdkVersion="14"

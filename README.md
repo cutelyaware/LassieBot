@@ -1,162 +1,24 @@
-Issues:
+# LassieBot
+LassieBot is a personal safety device for people who venture alone into the wild, and for seniors or others living alone where others might not notice their absence. LassieBot monitors the gyroscope and sends out SMS alerts to your emergency contacts when the device hasn't been moved for a long time. 
 
-  1. Don't stop the countdown racket unless stopping the countdown.
+Free for all uses with attribution requested.
 
-     This code in the listener for TIMEOUT_HOURS changes
-     turns off the countdown racket but it doesn't stop the countdown:
+## Usage
+Emergency contacts are identified by adding the four character "ICE:" prefix to the names of people in user's contacts. ICE stands for "In Case of Emergency" and is often looked for by emergency responders, so even if someone never uses LassieBot, they are making themselves safer by properly identifying good emergency contacts this way. NOTE: The colon in the prefix is important to LassiBot, so if you want to keep someone as an emergency contact but not have them contacted by LassieBot, just don't include the colon. When the "Refresh" button is clicked, LassieBot will search for all your emergency contacts and list them all. 
 
-         vibes.cancel();
-         if(tick.isPlaying())
-             tick.pause();
+When there is at least one such ICE contact, LassieBot will enable the main button. Clicking it will turn on LassieBot, and if the displayed number of hours elapses without detecting phone motion, then an alert SMS will be sent to all the listed contacts. During the last few seconds before sending alerts, LassieBot will make a lot of noise and vibrations, giving you a chance to move the phone and cancel the alerts.
 
-     Probably the only place the racket should be cancelled is where the countdown is actually stopped.
+## Testing
+It is important to test LassieBot so that you will know what it will do. If you are using this to protect yourself, the first thing you should do is talk with all potential emergency contacts you are considering using. You don't want to surprise someone with a scary message, even if you have a very close relationship with them and are certain that they will accept the responsibility. Let them know that this means that it may result in LassieBot alerts which may be real emergencies or false alarms. They may also get phone calls from emergency responders looking for help in deciding which hospitals to take you to, etc.
 
-  2. Changing Hours does not stop an in-progress 30-second countdown
+In the case of LassieBot alerts, your contacts should immediately attempt to call you back to find out if it is a real emergency. If they cannot reach you, they should begin calling other people and trying to track you down. It is obviously a big responsibility for anyone to accept, so please do this carefully and considerably.
 
-     I'm guessing changing Hours should stop the 30-second countdown;
-     it *appears* to stop it due to Issue #1, but it doesn't actually stop it.
-     To reproduce:
-       0. Set gyro sensitivity to low, and place phone on table so no shakes will be detected.
-       1. Set Hours spinner to 0.  Racket starts, signifying there's a 30-second countdown in progress.
-       2. Set Hours spinner to 1.  Racket stops (due to Issue #1), but 30-second countdown continues silently!
-       3. Wait for now-silent 30-second countdown to expire.  Text gets sent.
+For testing, it is best to have all the ICE contacts and their devices in the same room. Turn on LassieBot, open the "Configure & Test" section, and press the "Send Test Alert" button. Everyone in the contacts list should get an alert. Once that is successful, it may be a good idea to test the actual way by turning down the time-out limit to one hour, turning on LassieBot again, setting the phone down and leaving it untouched for one hour until the alert goes off automatically. This time you will hear the loud countdown timer at the end and you can test the ability to cancel the alert by simply picking up the phone if you like. Once everyone is very certain about how it works and what to do, just select an appropriate timeout length and simply leave LassieBot on.
 
-  3. Multiple 30-second countdown threads can happen simultaneously.
+## Battery and Charging
+When turned on, LassieBot will not allow your phone to sleep, otherwise it could not work. This will definitely drain your battery faster than normal. LassieBot is a free app, so just consider the frequent charging to be the price that you pay for the protection.
 
-     This is an extension of Issue #2 ("Changing Hours does not stop an in-progress 30-second countdown").
-     To reproduce:
-       0. Set gyro sensitivity to low, and place phone on table so no shakes will be detected.
-       1. Set Hours spinner to 0.  Racket starts, signifying there's a 30-second countdown in progress.
-       2. Set Hours spinner to 1.  Racket stops, but 30-second countdown continues silently.
-       3. Set Hours spinner to 0.  Racket starts again. Now there are 2 30-second countdowns in progress.
-       4. Set Hours spinner to 1.  Racket stops, the two 30-second countdowns continue silently.
-       (repeat several times if desired, to get as many simultaneous countdowns as desired).
+One configuration option is the "Off when charging" check box. When checked, this will disable alerts while your phone is charging, allowing you to select a smaller number of time-out hours for greater safety but at the risk of an actual emergency while sleeping or otherwise charging.
 
-      You can verify that there are multiple countdowns happening at once by looking at the logcat screen;
-      the "diff = " warning will come out several at a time.
-
-      Then additional bad things happen when the first of the threads counts down to 0 and sends the text:
-      it then calls stopService() which causes onDestroy() to be called, which causes tick.release()
-      to get called.  Then the second timer thread gets to the end of the 30-second countdown
-      and calls tick.pause(), which crashes the app because tick has been released.
-
-  4. Stopping service does not stop the deadManSwitch.
-
-     To reproduce:
-       0. Tweak source code so Hours is interpreted as minutes.  (remove a "* 60").
-       1. Start the app (activity).
-       2. Set Timeout Hours (really minutes) to 1.
-       3. Turn on the service.
-       4. Turn off the service.
-       5. Optionally, close the activity.
-       6. Wait 1 minute for timeout to expire.
-     The racket starts, signifying the 30-second countdown, and the text gets sent,
-     which is a surprise since the service isn't even running!
-     And shaking the phone doesn't stop the 30-second countdown,
-     since the sensor listener has been deactivated.
-
-  5. App crashes when 30-second countdown starts when text already sent.
-
-     To reproduce, follow the reproduction steps for Issue #2 ("Changing Hours does not stop an in-progress
-     30-second countdown"), through when the text gets sent and the button turns red.
-     At that point the services's onDestroy() gets called
-     which shuts down its listening for sensors, but its deadManSwitch is still
-     running and is impervious to shakes (see Issue #4).
-
-     Then wait another minute (assuming you tweaked the source code so "Hours" = minutes)
-     until it tries to start another 30-second countdown.
-     The application crashes here:
-
-         E/AndroidRuntime: FATAL EXCEPTION: Timer-5
-           Process: com.superliminal.android.lassiebot, PID: 20571
-           java.lang.IllegalStateException
-               at android.media.MediaPlayer._start(Native Method)
-               at android.media.MediaPlayer.start(MediaPlayer.java:1213)
-               at com.superliminal.android.lassiebot.LassieBotService$LertAlarm.run(LassieBotService.java:119)
-               at java.util.TimerThread.mainLoop(Timer.java:555)
-               at java.util.TimerThread.run(Timer.java:505)
-
-     This is the call to tick.start() in LertAlarm.run(),
-     which is illegal since tick.release() was called from onDestroy() earlier.
-
-  6. Document which code can be run in the Timer thread.
-
-     It would be good to go over all code reachable in the thread (i.e. reachable from LertAlarm.run())
-     and label all of it with comments saying the intent, either:
-     "called in Timer-created-thread only" or "called in both main thread and Timer-created thread".
-
-  7. Review code callable from Timer thread for thread safety.
-
-     After Issue #6 (identify which code is intended to be callable from Timer thread) is done,
-     review that code for thread-safety, e.g. variables being accessed
-     from both main thread and timer thread without needed synchronization.
-
-  8. mShakeSensor.mLastStrongShake is accessed from both threads without synchronization.
-
-  9. Are the MediaPlayer calls thread-safe?
-
-     There are calls to things like tick.pause(), vibes.cancel() etc. in both the main thread and the Timer thread.
-     Are these all known to be thread safe?  I didn't see anything about that when I briefly scanned the MediaPlayer documentation.
-     If they are not thread safe, they need to be surrounded by appropriate synchronized().
-
-  10. "Off when charging" + Hours=0 = unfriendly cpu-consuming loop.
-
-     If you have "Off when charging" checked and set the Hours spinner to 0,
-     it goes into an unfriendly cpu-consuming loop, continually calling reschedule()
-     and then going off immediately.
-
-==========================================================================
-
-Build recipes known to work:
-
-  * On Linux:
-
-    * In Android Studio:
-      * Build -> Build APK
-
-        If you get an error like "Failed to find target with hash string 'android-14' ...":
-          * Tools -> Android -> SDK Manager
-
-            Find the SDK Platform with API level matching the error message, check the checkbox, and install it.
-
-    * Command line:
-
-      The gradlew script in the repo won't work out of the box--
-      it gives the following error:
-        > SDK location not found. Define location with sdk.dir in the
-        local.properties file or with an ANDROID_HOME environment variable.
-
-      You gotta do what it says.  The simplest way is to open
-      the project in Android Studio (no need to build it there),
-      which will create an appropriate local.properties file.
-      Or, you can try to create local.properties yourself-- the contents should
-      describe a location that exists, something like this if you've run
-      Android Studio some time in the past on Linux:
-
-        > `sdk.dir=/home/joe/Android/Sdk`
-
-      or, on Windows, maybe something like this:
-
-        > `sdk.dir=C\:\\Users\\Joe Blow\\AppData\\Local\\Android\\Sdk`
-
-      or on mac:
-
-        > `sdk.dir=/Users/joe/Library/Android/sdk`
-
-      If you get that right, commands like the following should work:
-        * `./gradlew assembleDebug`
-        * `./gradlew installDebug`
-
-  * On Mac:
-
-    * Android Studio: Similar to linux.
-
-    * Command line: Similar to Linux.
-
-      At first gradle failed for me with errors like:
-       > `ava.lang.UnsupportedClassVersionError: com/android/build/gradle/AppPlugin : Unsupported major.minor version 52.0`
-
-      and:
-       > `Buildtools 25.0.2 requires Java 1.8 or above.  Current JDK version is 1.7.`
-
-      until I installed Java8 on my machine; then it worked fine.
+#Liability
+By using LassieBot, you agree to accept all risk including false alarms, real alarms not sent, bugs in the software. Incorrect or misleading documentation, battery drain, and all other consequences, intentional or otherwise. You agree to hold harmless, Melinda Green, Superliminal Software, and anyone associated in any way with this project.
