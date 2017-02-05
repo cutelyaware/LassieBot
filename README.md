@@ -20,5 +20,8 @@ When turned on, LassieBot will not allow your phone to sleep, otherwise it could
 
 One configuration option is the "Off when charging" check box. When checked, this will disable alerts while your phone is charging, allowing you to select a smaller number of time-out hours for greater safety but at the risk of an actual emergency while sleeping or otherwise charging.
 
-#Liability
+## Credits
+By Melinda Green with special thanks to Don Hatch for finding several important bugs.
+
+## Liability
 By using LassieBot, you agree to accept all risk including false alarms, real alarms not sent, bugs in the software. Incorrect or misleading documentation, battery drain, and all other consequences, intentional or otherwise. You agree to hold harmless, Melinda Green, Superliminal Software, and anyone associated in any way with this project.
