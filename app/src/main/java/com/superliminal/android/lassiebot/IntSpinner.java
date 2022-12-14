@@ -19,7 +19,7 @@ public class IntSpinner extends LinearLayout {
         public void valueChanged(int new_val);
     }
 
-    private List<IntSpinnerListener> mListeners = new ArrayList<IntSpinnerListener>();
+    private final List<IntSpinnerListener> mListeners = new ArrayList<>();
 
     public void addListener(IntSpinnerListener l) {
         mListeners.add(l);

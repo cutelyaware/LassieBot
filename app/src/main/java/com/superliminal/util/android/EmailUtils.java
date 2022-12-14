@@ -94,7 +94,6 @@ public class EmailUtils {
      * @return A managed cursor of contacts for the given activity and optional String prefix.
      */
     public static Cursor buildFilteredCursor(Activity activity, String prefix, String dataKind, Uri uri) {
-        String my_sort_order = null;
         String my_selection = ContactsContract.Contacts.IN_VISIBLE_GROUP + " = '1'";
         if(prefix != null)
             my_selection += " AND " + ContactsContract.Contacts.DISPLAY_NAME + " LIKE '" + prefix + "%'";
@@ -102,7 +101,8 @@ public class EmailUtils {
             ContactsContract.Contacts._ID,
             ContactsContract.Contacts.DISPLAY_NAME,
             dataKind};
-        return activity.managedQuery(uri, eproj, my_selection, null, my_sort_order);
+        return activity.getBaseContext().getContentResolver()
+                .query(uri, eproj, my_selection, null, null);
     }
 
     public static Cursor buildFilteredEmailCursor(Activity activity, String prefix) {

@@ -15,12 +15,14 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
-import android.os.AsyncTask;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.telephony.SmsManager;
@@ -31,6 +33,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LassieBotService extends Service {
     static final boolean DEBUG = false;
@@ -48,7 +52,7 @@ public class LassieBotService extends Service {
     static final String ICE_PREFIX = "ICE:";
     static final String TAG = "lert";
     static final char NAME_PHONE_SEPARATOR = '\u2013';
-    static final int PREFS_SHARE_MODE = android.content.Context.MODE_WORLD_READABLE;
+    static final int PREFS_SHARE_MODE = Context.MODE_PRIVATE;
     static final int DEFAULT_TIMEOUT_HOURS = 12;
     static boolean CONFIGURE = false; // Whether to play sound on strong events.
     static final boolean DEFAULT_DISABLE_WHILE_CHARGING = true;
@@ -80,10 +84,13 @@ public class LassieBotService extends Service {
     // Code to be run when the dead-man's-switch is triggered.
     private class LertAlarm extends TimerTask {
         private boolean doCountdown = true;
-        public LertAlarm() {}
-        public LertAlarm(boolean doCountdown){
+        private final Context mContext;
+        public LertAlarm(Context context) { mContext = context; }
+        public LertAlarm(Context context, boolean doCountdown){
+            mContext = context;
             this.doCountdown = doCountdown;
         }
+        @SuppressWarnings("deprecation")
         @Override
         public void run() {
             // If the timer goes off while charging and not "disabled while charging", just quietly restart it.
@@ -103,7 +110,11 @@ public class LassieBotService extends Service {
             if(doCountdown) {
                 // Start the countdown sound.
                 tick.start();
-                vibes.vibrate(new long[] {500, 500}, 0);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibes.vibrate(VibrationEffect.createWaveform(new long[] {500, 500}, 0));
+                } else {
+                    vibes.vibrate(new long[] {500, 500}, 0);
+                }
                 // Block while giving user a chance to nudge the phone to cancel.
                 final long counting_start = System.currentTimeMillis();
                 for(int i=0; i<COUNTDOWN_SECONDS; i++) {
@@ -116,7 +127,7 @@ public class LassieBotService extends Service {
                             tick.pause();
                             return;
                         }
-                    } catch (InterruptedException e) {}
+                    } catch (InterruptedException ignored) {}
                     Log.w(TAG, "diff = " + (counting_start - mShakeSensor.mLastStrongShake));
                     if(mShakeSensor.mLastStrongShake > counting_start) {
                         // Phone moved during countdown so abort the alert.
@@ -133,7 +144,7 @@ public class LassieBotService extends Service {
             // for the maximum time allowed. That could indicate an incapacitated user
             // so it's time to send scary notifications to their chosen ICE recipients.
             String user_name = "A Lert user"; // Hopefully will always be replaced below.
-            Cursor c = getContentResolver().query(ContactsContract.Profile.CONTENT_URI, new String[]{Phone.DISPLAY_NAME,}, null, null, null);
+            Cursor c = getContentResolver().query(ContactsContract.Profile.CONTENT_URI, new String[]{Phone.DISPLAY_NAME}, null, null, null);
             if(c != null && c.getCount() > 0) {
                 c.moveToFirst();
                 String got_name = c.getString(0);
@@ -145,7 +156,7 @@ public class LassieBotService extends Service {
                 c.close();
             }
             // TODO: Also get the user's phone number if possible and send it the alert too so that user can see false positives immediately.
-            Set<String> ice_phones = new HashSet<String>();
+            Set<String> ice_phones = new HashSet<>();
             ice_phones = prefs.getStringSet(PREFS_KEY_ICE_PHONES, ice_phones);
             for(String contact : ice_phones) {
                 int separator = contact.indexOf(LassieBotService.NAME_PHONE_SEPARATOR);
@@ -154,7 +165,7 @@ public class LassieBotService extends Service {
                 String name = contact.substring(LassieBotService.ICE_PREFIX.length(), separator);
                 String phone = contact.substring(separator + 1);
                 Log.d(TAG, "alerting " + contact);
-                SmsManager.getDefault().sendTextMessage(phone, null, user_name + WARNING_MESSAGE, null, null);
+                mContext.getSystemService(SmsManager.class).sendTextMessage(phone, null, user_name + WARNING_MESSAGE, null, null);
             }
             // We can't release the MediaPlayer resources until after the buzzer finishes.
             // Ideally we would do this in onDestroy() but the sound can complete
@@ -216,7 +227,7 @@ public class LassieBotService extends Service {
         }
     }
 
-    private MyShakeSensor mShakeSensor = new MyShakeSensor();
+    private final MyShakeSensor mShakeSensor = new MyShakeSensor();
 
     private void reschedule() {
         // Synchronizing below may do nothing but the alarm has gone off during testing and
@@ -229,7 +240,7 @@ public class LassieBotService extends Service {
                 deadManSwitch.purge();
             }
             Timer new_timer = new Timer();
-            new_timer.schedule(new LertAlarm(), TIMEOUT_MILLIS);
+            new_timer.schedule(new LertAlarm(this.getApplicationContext()), TIMEOUT_MILLIS);
             deadManSwitch = new_timer;
         }
     }
@@ -245,20 +256,17 @@ public class LassieBotService extends Service {
     }
 
     private void test() {
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                (new LertAlarm(DEBUG)).run();
-                return null;
-            }
-        }.execute();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            (new LertAlarm(this.getApplicationContext(), DEBUG)).run();
+        });
     }
 
-
+    @SuppressWarnings("deprecation")
     @Override
     public void onCreate() {
         Log.d(TAG, "obtaining wake lock");
-        wakeLock = ((PowerManager) getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Lert Tag");
+        wakeLock = ((PowerManager) getSystemService(Context.POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LassieBot:LertTag");
         dink = MediaPlayer.create(this, R.raw.dink);
         beep = MediaPlayer.create(this, R.raw.beep8);
         buzz = MediaPlayer.create(this, R.raw.buzzer_x);
@@ -276,7 +284,7 @@ public class LassieBotService extends Service {
             sensorMgr.registerListener(mShakeSensor, sensors.get(0), SensorManager.SENSOR_DELAY_NORMAL);
             reschedule();
         }
-        mPrefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+        mPrefListener = new OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
                 // Handlers for preferences that must run when changed. Other uses can query when needed.
@@ -298,7 +306,13 @@ public class LassieBotService extends Service {
         };
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, PREFS_SHARE_MODE);
         prefs.registerOnSharedPreferenceChangeListener(mPrefListener);
-        vibes = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager manager =
+                    (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            vibes = manager.getDefaultVibrator();
+        } else {
+            vibes = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        }
     } // end onCreate()
 
     @Override
@@ -310,15 +324,15 @@ public class LassieBotService extends Service {
         unschedule(); // To stop the timer which would otherwise keep running!
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, PREFS_SHARE_MODE);
         prefs.unregisterOnSharedPreferenceChangeListener(mPrefListener);
-        prefs.edit().putBoolean(PREFS_KEY_RUNNING, false).commit();
+        prefs.edit().putBoolean(PREFS_KEY_RUNNING, false).apply();
     }
 
     @Override
     public int onStartCommand(Intent startIntent, int flags, int startId) {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, PREFS_SHARE_MODE);
-        prefs.edit().putBoolean(PREFS_KEY_RUNNING, true).commit();
+        prefs.edit().putBoolean(PREFS_KEY_RUNNING, true).apply();
         //Toast.makeText(this, "Lert Service started", Toast.LENGTH_LONG).show();
-        wakeLock.acquire();
+        wakeLock.acquire(10*60*1000L /*10 minutes*/);
 
         // The following sets the service in the "foreground". That term is a bit confusing
         // because services are always run in the background. To Android, a foreground service
@@ -326,13 +340,14 @@ public class LassieBotService extends Service {
         // From http://stackoverflow.com/questions/3687200/implement-startforeground-method-in-android
         Intent intent = new Intent(this, LassieBotActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendIntent = PendingIntent.getActivity(this, 0, intent, 0);
-        String activity_name = getString(getApplicationInfo().labelRes);
-        Notification notice = new Notification(R.drawable.dog_robot_orig48,
-            activity_name + " activated", System.currentTimeMillis());
-        notice.setLatestEventInfo(this, activity_name, "is on the job!", pendIntent);
-        notice.flags |= Notification.FLAG_NO_CLEAR;
-        startForeground(LERT_SERVICE_ID, notice);
+//        PendingIntent pendIntent = PendingIntent.getActivity(this, 0, intent, 0);
+//        String activity_name = getString(getApplicationInfo().labelRes);
+//        // icon, ticker text, when
+//        Notification notice = new Notification(R.drawable.dog_robot_orig48,
+//            activity_name + " activated", System.currentTimeMillis());
+//        notice.setLatestEventInfo(this, activity_name, "is on the job!", pendIntent);
+//        notice.flags |= Notification.FLAG_NO_CLEAR;
+//        startForeground(LERT_SERVICE_ID, notice);
 
         // Immediately pick up any stored timeout preference.
         mPrefListener.onSharedPreferenceChanged(prefs, PREFS_KEY_TIMEOUT_HOURS);
